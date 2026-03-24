@@ -38,6 +38,8 @@
 !/app/assets/builds/.keep
 
 /node_modules
+.yarn/install-state.gz
+.yarn/unplugged/
 
 # Playwright MCP browser profile/cache
 .playwright-mcp/
