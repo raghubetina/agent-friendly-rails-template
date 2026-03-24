@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   bootstrap:
-    if: github.event.repository.name != 'rails-starter-app'
+    if: ${{ github.event.repository.name != 'rails-starter-app' && github.event.repository.name != 'agent-friendly-rails-template' }}
     runs-on: ubuntu-latest
     services:
       postgres:
