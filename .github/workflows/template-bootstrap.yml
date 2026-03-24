@@ -1,0 +1,111 @@
+name: Template Bootstrap
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.event.repository.name != 'rails-starter-app'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: rails
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: app_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://rails:password@localhost:5432/app_test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether bootstrap is needed
+        id: check
+        run: |
+          target_slug="${{ github.event.repository.name }}"
+          current_module="$(ruby -ne 'if $_ =~ /^\s*module\s+([A-Za-z0-9_:]+)/; puts $1; exit; end' config/application.rb)"
+          target_module="$(ruby -e 'puts ARGV.fetch(0).tr("-", "_").split("_").map(&:capitalize).join' "$target_slug")"
+
+          echo "target_slug=$target_slug" >> "$GITHUB_OUTPUT"
+
+          if [ "$current_module" = "$target_module" ]; then
+            echo "needs_bootstrap=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "needs_bootstrap=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install Ruby and gems
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Set up Node
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".node-version"
+
+      - name: Enable Corepack
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: corepack enable
+
+      - name: Bootstrap app name
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: bin/bootstrap "${{ steps.check.outputs.target_slug }}"
+
+      - name: Set up database
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: bin/rails db:test:prepare
+
+      - name: Lint Ruby
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: bundle exec standardrb
+
+      - name: Lint ERB
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: bundle exec herb analyze .
+
+      - name: Build JavaScript
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: corepack yarn build
+
+      - name: Build CSS
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: corepack yarn build:css
+
+      - name: Run specs
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: bundle exec rspec
+
+      - name: Commit bootstrap changes
+        if: steps.check.outputs.needs_bootstrap == 'true'
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Bootstrap app from template"
+          git push

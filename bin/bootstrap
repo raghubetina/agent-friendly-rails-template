@@ -1,0 +1,127 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+APP_ROOT = File.expand_path("..", __dir__)
+RENAME_GEM_BLOCK_START = "# BEGIN bootstrap rename gem"
+RENAME_GEM_BLOCK_END = "# END bootstrap rename gem"
+RENAME_GEM_GIT = "https://github.com/raghubetina/rename-rails.git"
+RENAME_GEM_REF = "6e9541b"
+
+def say(message)
+  puts "== #{message}"
+end
+
+def abort_with(message)
+  warn message
+  exit 1
+end
+
+def finish(message)
+  puts message
+  exit 0
+end
+
+def run!(*command, chdir:)
+  system(*command, chdir: chdir, exception: true)
+end
+
+def command_available?(command_name)
+  ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |path_entry|
+    File.executable?(File.join(path_entry, command_name))
+  end
+end
+
+def ruby_tool_command(*command)
+  return ["asdf", "exec", *command] if command_available?("asdf")
+
+  command
+end
+
+def normalize_target(raw_name)
+  slug = raw_name.to_s.strip
+  slug = File.basename(APP_ROOT) if slug.empty?
+  slug = slug.tr("\\/", "-").downcase.gsub(/[^a-z0-9_-]+/, "-")
+  slug = slug.tr("_", "-").squeeze("-").gsub(/\A-|-+\z/, "")
+
+  abort_with("Usage: bin/bootstrap [app-slug]") if slug.empty?
+  abort_with("App name cannot start with a number: #{slug}") if slug.match?(/\A\d/)
+
+  slug
+end
+
+def current_module_name(root)
+  application_file = File.join(root, "config/application.rb")
+  File.read(application_file)[/^\s*module\s+([A-Za-z0-9_:]+)/, 1]
+end
+
+def module_name_for(target_slug)
+  target_slug.tr("-", "_").split("_").map(&:capitalize).join
+end
+
+def temporary_rename_gem_block
+  <<~RUBY
+
+    #{RENAME_GEM_BLOCK_START}
+    group :development do
+      gem "rename", git: "#{RENAME_GEM_GIT}", ref: "#{RENAME_GEM_REF}", require: false
+    end
+    #{RENAME_GEM_BLOCK_END}
+  RUBY
+end
+
+def ensure_temporary_rename_gem!(root)
+  gemfile = File.join(root, "Gemfile")
+  content = File.read(gemfile)
+  return if content.include?(RENAME_GEM_BLOCK_START)
+
+  File.write(gemfile, "#{content.rstrip}\n#{temporary_rename_gem_block}")
+end
+
+def remove_temporary_rename_gem!(root)
+  gemfile = File.join(root, "Gemfile")
+  content = File.read(gemfile)
+  cleaned = content.sub(
+    /\n#{Regexp.escape(RENAME_GEM_BLOCK_START)}.*?#{Regexp.escape(RENAME_GEM_BLOCK_END)}\n/mo,
+    "\n"
+  )
+
+  File.write(gemfile, "#{cleaned.rstrip}\n")
+end
+
+target_slug = normalize_target(ARGV.first)
+target_module_name = module_name_for(target_slug)
+starting_module_name = current_module_name(APP_ROOT)
+
+if starting_module_name == target_module_name
+  finish("App is already named #{target_slug}. Pass a different app slug to rename it.")
+end
+
+renamed_root = File.join(File.dirname(APP_ROOT), target_slug)
+
+say("Bootstrapping #{target_slug}")
+say("Installing temporary rename dependency")
+ensure_temporary_rename_gem!(APP_ROOT)
+run!(*ruby_tool_command("bundle", "install"), chdir: APP_ROOT)
+
+say("Renaming Rails app internals")
+run!(*ruby_tool_command("bundle", "exec", "rails", "generate", "rename:into", target_slug), chdir: APP_ROOT)
+
+unless File.directory?(renamed_root)
+  abort_with("Rename completed but #{renamed_root} was not found.")
+end
+
+say("Removing temporary rename dependency")
+remove_temporary_rename_gem!(renamed_root)
+run!(*ruby_tool_command("bundle", "install"), chdir: renamed_root)
+
+say("Refreshing Yarn metadata")
+run!("corepack", "yarn", "install", chdir: renamed_root)
+
+say("Bootstrap complete")
+puts <<~TEXT
+
+  Next steps:
+    1. cp .env.example .env
+    2. cp .env.mcp.example .env.mcp
+    3. bin/setup
+TEXT

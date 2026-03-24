@@ -14,29 +14,47 @@ Claude Code.
 - StandardRB and Herb
 - Tidewave, Playwright MCP, DaisyUI Blueprint MCP
 
+## Bootstrap
+
+If you created this repo from the GitHub template, bootstrap it once before
+setup:
+
+```bash
+bin/bootstrap
+```
+
+`bin/bootstrap` uses the current directory name as the target app slug. You can
+also pass one explicitly:
+
+```bash
+bin/bootstrap my-app
+```
+
+The script temporarily installs `rename-rails`, renames the Rails app internals
+to match the target slug, removes the temporary gem again, and refreshes Bundler
+and Yarn metadata.
+
+The template also ships with a first-run GitHub Actions workflow that attempts
+the same bootstrap automatically in newly generated repos using the chosen repo
+name. Keep `bin/bootstrap` as the fallback if Actions are disabled, the
+workflow fails, or you rename the repository later.
+
 ## Setup
 
-1. Install dependencies:
-
-   ```bash
-   bundle install
-   corepack yarn install
-   ```
-
-2. Copy the example env files you need:
+1. Copy the example env files you need:
 
    ```bash
    cp .env.example .env
    cp .env.mcp.example .env.mcp
    ```
 
-3. Prepare the database:
+2. Run setup:
 
    ```bash
-   bin/rails db:prepare
+   bin/setup
    ```
 
-4. Run the app:
+3. Run the app:
 
    ```bash
    bin/dev
