@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+load_mcp_env
+
+require_env "DAISYUI_BLUEPRINT_EMAIL" \
+  "Set DAISYUI_BLUEPRINT_EMAIL before using the DaisyUI Blueprint MCP. $(mcp_env_hint)"
+require_env "DAISYUI_BLUEPRINT_LICENSE" \
+  "Set DAISYUI_BLUEPRINT_LICENSE before using the DaisyUI Blueprint MCP. $(mcp_env_hint)"
+
+export EMAIL="${DAISYUI_BLUEPRINT_EMAIL}"
+export LICENSE="${DAISYUI_BLUEPRINT_LICENSE}"
+
+exec npx -y daisyui-blueprint@latest

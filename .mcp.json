@@ -1,0 +1,39 @@
+{
+  "mcpServers": {
+    "daisyui-blueprint": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "./bin/mcp/daisyui-blueprint"
+      ]
+    },
+    "playwright": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "./bin/mcp/playwright"
+      ]
+    },
+    "tidewave": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "./bin/mcp/tidewave"
+      ]
+    },
+    "render": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "./bin/mcp/render"
+      ]
+    },
+    "rollbar": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "./bin/mcp/rollbar"
+      ]
+    }
+  }
+}

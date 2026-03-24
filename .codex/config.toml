@@ -1,0 +1,11 @@
+[mcp_servers."daisyui-blueprint"]
+command = "bash"
+args = ["-lc", "./bin/mcp/daisyui-blueprint"]
+
+[mcp_servers.playwright]
+command = "bash"
+args = ["-lc", "./bin/mcp/playwright"]
+
+[mcp_servers.tidewave]
+command = "bash"
+args = ["-lc", "./bin/mcp/tidewave"]

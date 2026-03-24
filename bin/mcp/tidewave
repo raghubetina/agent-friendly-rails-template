@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+load_mcp_env
+
+TIDEWAVE_URL="${TIDEWAVE_MCP_URL:-http://localhost:3000/tidewave/mcp}"
+TIDEWAVE_CONFIG_URL="${TIDEWAVE_URL%/mcp}/config"
+TIDEWAVE_STATUS="$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" "${TIDEWAVE_CONFIG_URL}" || true)"
+
+case "${TIDEWAVE_STATUS}" in
+  200)
+    exec npx -y mcp-remote "${TIDEWAVE_URL}"
+    ;;
+  000)
+    printf '%s\n' "Could not reach Tidewave at ${TIDEWAVE_CONFIG_URL}. Start or restart Rails with bin/dev, then try again." >&2
+    ;;
+  404)
+    printf '%s\n' "Tidewave returned 404 at ${TIDEWAVE_CONFIG_URL}. Restart Rails so the Tidewave middleware is loaded, or check TIDEWAVE_MCP_URL." >&2
+    ;;
+  *)
+    printf '%s\n' "Tidewave health check at ${TIDEWAVE_CONFIG_URL} returned HTTP ${TIDEWAVE_STATUS}. Check the running app and TIDEWAVE_MCP_URL." >&2
+    ;;
+esac
+
+exit 1

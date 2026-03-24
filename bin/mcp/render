@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+load_mcp_env
+
+require_env "RENDER_API_KEY" \
+  "Set RENDER_API_KEY before using the Render MCP. $(mcp_env_hint)"
+
+exec npx -y mcp-remote https://mcp.render.com/mcp \
+  --header "Authorization: Bearer ${RENDER_API_KEY}"

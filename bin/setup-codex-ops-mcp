@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+ensure_server() {
+  local name="$1"
+  shift
+
+  if codex mcp get "${name}" >/dev/null 2>&1; then
+    printf '%s already configured for Codex.\n' "${name}"
+    return 0
+  fi
+
+  codex mcp add "${name}" -- "$@"
+  printf 'Added %s to the user/global Codex config.\n' "${name}"
+}
+
+cd "${APP_ROOT}"
+
+ensure_server render bash -lc "./bin/mcp/render"
+ensure_server rollbar bash -lc "./bin/mcp/rollbar"
+
+printf '\nCodex ops MCPs are ready in the user/global config. Export the required env vars before use.\n'
