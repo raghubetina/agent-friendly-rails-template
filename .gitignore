@@ -56,5 +56,6 @@
 !.codex/config.toml
 !.claude/
 !.claude/**
+.claude/settings.local.json
 !.agents/
 !.agents/**
