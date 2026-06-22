@@ -61,7 +61,7 @@ jobs:
 
       - name: Set up Node
         if: steps.check.outputs.needs_bootstrap == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".node-version"
 
